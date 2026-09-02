@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Transfer Details","status":"success","data":{"account_name":"Israel Goytom","account_number":"1000212659000","mobile":null,"currency":"ETB","amount":100,"charge":5,"transfer_type":"default","chapa_reference":"CHAPA-TRANSFER-1234","bank_code":946,"bank_name":"Commercial Bank of Ethiopia (CBE)","bank_reference":"FT12345678","status":"success","reference":"payout-0001","created_at":"2023-02-02T07:05:23.000000Z","updated_at":"2023-02-02T07:05:23.000000Z"}}

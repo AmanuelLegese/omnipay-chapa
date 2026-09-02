@@ -48,6 +48,23 @@ abstract class AbstractRequest extends OmnipayAbstractRequest
     }
 
     /**
+     * The secret Chapa signs webhooks with. Configured separately in the Chapa
+     * dashboard; falls back to the API secret key when not set.
+     */
+    public function getWebhookSecret(): ?string
+    {
+        return $this->getParameter('webhookSecret') ?: $this->getSecretKey();
+    }
+
+    /**
+     * @return $this
+     */
+    public function setWebhookSecret(?string $value): self
+    {
+        return $this->setParameter('webhookSecret', $value);
+    }
+
+    /**
      * @param array $data
      */
     public function sendData($data): ResponseInterface

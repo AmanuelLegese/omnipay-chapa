@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Transfer Details","status":"success","data":{"account_name":"Israel Goytom","account_number":"1000212659000","currency":"ETB","amount":100,"charge":5,"chapa_reference":"CHAPA-TRANSFER-1234","bank_code":946,"status":"pending","reference":"payout-0001"}}

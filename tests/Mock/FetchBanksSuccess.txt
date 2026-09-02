@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Banks retrieved","data":[{"id":946,"slug":"cbe","swift":"CBETETAA","name":"Commercial Bank of Ethiopia (CBE)","acct_length":13,"currency":"ETB"},{"id":855,"slug":"awash","swift":"AWINETAA","name":"Awash Bank","acct_length":14,"currency":"ETB"}],"status":"success"}

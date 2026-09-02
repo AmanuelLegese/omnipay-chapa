@@ -14,12 +14,13 @@ local payment methods such as telebirr, CBE Birr, M-Pesa and Amole alongside car
 
 **Not yet released to Packagist.**
 
-Hosted checkout works: `purchase` and `completePurchase` are implemented and tested against
-mock fixtures. Webhook handling (`acceptNotification`) and Chapa's transfer/payout API are
-not implemented yet.
+Implemented and tested against mock fixtures: hosted checkout (`purchase`,
+`completePurchase`), webhooks (`acceptNotification`), and payouts (`transfer`,
+`fetchTransfer`, `fetchBanks`). Bulk transfers are not implemented.
 
 The library has not been exercised against Chapa's live sandbox, so treat the first
-integration as unverified against the real service.
+integration as unverified against the real service. Chapa does not publish the full shape of
+the transfer `data` object, so those accessors are the least certain part of the package.
 
 ## Installation
 
@@ -79,6 +80,69 @@ server-to-server callback. `currency` defaults to `ETB`.
 
 To brand the hosted checkout page, pass `customizationTitle` and `customizationDescription`
 to `purchase()`. The description falls back to the standard Omnipay `description` parameter.
+
+## Webhooks
+
+Point Chapa's `callback_url` at your endpoint and set the webhook secret from the Chapa
+dashboard. It falls back to the API secret key if you don't set it separately.
+
+```php
+$gateway->setWebhookSecret('...');
+
+try {
+    $notification = $gateway->acceptNotification();
+} catch (\Omnipay\Common\Exception\InvalidRequestException $e) {
+    // Unsigned or forged. Do not process.
+    http_response_code(400);
+    return;
+}
+
+if ($notification->getTransactionStatus() === $notification::STATUS_COMPLETED) {
+    // Settle the order for $notification->getTransactionReference().
+}
+```
+
+`acceptNotification()` fails closed: it throws rather than returning an object when the
+signature is missing or does not verify, so an unauthenticated event cannot be processed by
+accident.
+
+### A note on Chapa's two signature headers
+
+Chapa sends both `x-chapa-signature` (an HMAC-SHA256 of the event payload) and
+`Chapa-Signature` (an HMAC-SHA256 of your secret key, keyed by the secret key itself).
+
+The second is a **constant** — it does not depend on the payload, so it is identical on every
+webhook you receive. It shows the sender knew your secret at some point but gives no
+integrity guarantee for the body, and anyone who observes it once can replay it against a
+forged payload.
+
+Chapa's documentation states either header is sufficient. This package deliberately does not
+follow that: it requires `x-chapa-signature` and ignores `Chapa-Signature`. If Chapa ever
+sends only the constant, those webhooks are rejected — you will see unprocessed events
+rather than accepting forged ones.
+
+## Payouts
+
+Payouts fall outside Omnipay's `GatewayInterface`, so these are Chapa-specific methods on the
+concrete gateway rather than part of the shared Omnipay contract.
+
+```php
+$banks = $gateway->fetchBanks()->send()->getBankCodes();   // ['Awash Bank' => '855', ...]
+
+$response = $gateway->transfer([
+    'amount'        => '100.00',
+    'accountNumber' => '1000212659000',
+    'bankCode'      => $banks['Awash Bank'],
+    'accountName'   => 'Israel Goytom',
+    'transactionId' => 'payout-0001',
+])->send();
+
+// Acceptance is not settlement; confirm separately.
+$status = $gateway->fetchTransfer(['transactionId' => 'payout-0001'])->send();
+```
+
+A wrong `bank_code` sends money to a valid account at the wrong bank, so resolve codes
+through `fetchBanks()` rather than hard-coding them.
 
 ## Development
 

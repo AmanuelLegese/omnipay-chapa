@@ -3,6 +3,10 @@
 namespace Omnipay\Chapa\Tests;
 
 use Omnipay\Chapa\Gateway;
+use Omnipay\Chapa\Message\FetchBanksRequest;
+use Omnipay\Chapa\Message\FetchTransferRequest;
+use Omnipay\Chapa\Message\TransferRequest;
+use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Tests\GatewayTestCase;
 
 class GatewayTest extends GatewayTestCase
@@ -25,15 +29,49 @@ class GatewayTest extends GatewayTestCase
         $this->assertSame('Chapa', $this->gateway->getShortName());
     }
 
-    public function testSupportsHostedCheckoutOnly(): void
+    public function testSupportsCheckoutAndNotifications(): void
     {
         $this->assertTrue($this->gateway->supportsPurchase());
         $this->assertTrue($this->gateway->supportsCompletePurchase());
+        $this->assertTrue($this->gateway->supportsAcceptNotification());
 
         $this->assertFalse($this->gateway->supportsAuthorize());
         $this->assertFalse($this->gateway->supportsCapture());
         $this->assertFalse($this->gateway->supportsRefund());
         $this->assertFalse($this->gateway->supportsVoid());
+    }
+
+    public function testWebhookSecretFallsBackToSecretKey(): void
+    {
+        $this->assertSame('CHASECK_TEST-abc123', $this->gateway->getWebhookSecret());
+
+        $this->gateway->setWebhookSecret('whsec-separate');
+        $this->assertSame('whsec-separate', $this->gateway->getWebhookSecret());
+    }
+
+    /**
+     * Payouts sit outside GatewayInterface, so they are only reachable on the
+     * concrete gateway. Pin that they are wired up at all.
+     */
+    public function testExposesTransferMethods(): void
+    {
+        $this->assertInstanceOf(
+            TransferRequest::class,
+            $this->gateway->transfer(['amount' => '100.00'])
+        );
+        $this->assertInstanceOf(
+            FetchTransferRequest::class,
+            $this->gateway->fetchTransfer(['transactionId' => 'payout-0001'])
+        );
+        $this->assertInstanceOf(FetchBanksRequest::class, $this->gateway->fetchBanks());
+    }
+
+    public function testAcceptNotificationRejectsUnsignedWebhook(): void
+    {
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage('Missing x-chapa-signature header');
+
+        $this->gateway->acceptNotification();
     }
 
     public function testPurchaseRedirectsToHostedCheckout(): void

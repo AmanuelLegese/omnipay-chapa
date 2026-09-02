@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Transfer Queued Successfully","status":"success","data":"3241342142sfdd"}
