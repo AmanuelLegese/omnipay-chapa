@@ -29,12 +29,13 @@
         "psr-4": { "Omnipay\\Chapa\\Tests\\": "tests/" }
     },
     "require": {
-        "php": "^8.0",
+        "php": "^8.2",
         "ext-json": "*",
         "omnipay/common": "^3.5"
     },
     "require-dev": {
-        "omnipay/tests": "^4.1",
+        "omnipay/tests": "^4.2",
+        "phpunit/phpunit": "^11.0",
         "php-http/mock-client": "^1.6",
         "php-http/guzzle7-adapter": "^1",
         "squizlabs/php_codesniffer": "^3.8"
@@ -52,8 +53,7 @@
     "config": {
         "allow-plugins": {
             "php-http/discovery": true
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+        },
+        "sort-packages": true
+    }
 }

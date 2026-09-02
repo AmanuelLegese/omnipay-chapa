@@ -12,11 +12,14 @@ local payment methods such as telebirr, CBE Birr, M-Pesa and Amole alongside car
 
 ## Status
 
-**Under development. Not yet released.**
+**Not yet released to Packagist.**
 
-The gateway classes are not implemented yet, so this package is not usable and has not been
-published to Packagist. The usage section below describes the intended interface, not
-working code.
+Hosted checkout works: `purchase` and `completePurchase` are implemented and tested against
+mock fixtures. Webhook handling (`acceptNotification`) and Chapa's transfer/payout API are
+not implemented yet.
+
+The library has not been exercised against Chapa's live sandbox, so treat the first
+integration as unverified against the real service.
 
 ## Installation
 
@@ -26,7 +29,7 @@ Once released, install via [Composer](https://getcomposer.org/):
 composer require amanuellegese/omnipay-chapa
 ```
 
-This package requires PHP 8.0+ and `omnipay/common` ^3.5. It does not depend on Chapa's
+This package requires PHP 8.2+ and `omnipay/common` ^3.5. It does not depend on Chapa's
 official PHP SDK; it talks to the HTTP API directly, as Omnipay drivers conventionally do.
 
 ## Usage
@@ -63,8 +66,19 @@ $response = $gateway->completePurchase([
 
 if ($response->isSuccessful()) {
     // Payment confirmed.
+} elseif ($response->isPending()) {
+    // Customer has not finished paying. Worth retrying, not a failure.
+} else {
+    echo $response->getMessage();
 }
 ```
+
+`transactionId` is Chapa's `tx_ref` — you choose it, and it is what you verify against later.
+`returnUrl` is where the browser lands; `notifyUrl` maps to Chapa's `callback_url`, the
+server-to-server callback. `currency` defaults to `ETB`.
+
+To brand the hosted checkout page, pass `customizationTitle` and `customizationDescription`
+to `purchase()`. The description falls back to the standard Omnipay `description` parameter.
 
 ## Development
 

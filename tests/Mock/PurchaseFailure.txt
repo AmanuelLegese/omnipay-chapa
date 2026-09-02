@@ -1,0 +1,4 @@
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":{"amount":["The amount field is required."],"currency":["The currency must be ETB or USD."]},"status":"failed","data":null}
