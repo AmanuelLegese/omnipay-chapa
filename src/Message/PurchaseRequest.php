@@ -50,6 +50,60 @@ class PurchaseRequest extends AbstractRequest
         return $this->setParameter('customizationDescription', $value);
     }
 
+    public function getCustomizationLogo(): ?string
+    {
+        return $this->getParameter('customizationLogo');
+    }
+
+    /**
+     * Logo shown on the hosted checkout page.
+     *
+     * @return $this
+     */
+    public function setCustomizationLogo(?string $value): self
+    {
+        return $this->setParameter('customizationLogo', $value);
+    }
+
+    public function getSubaccounts(): ?array
+    {
+        return $this->getParameter('subaccounts');
+    }
+
+    /**
+     * Subaccounts to split this payment across. Each entry is either a bare
+     * subaccount id or an array of `id` plus optional `split_type` and
+     * `transaction_charge` overriding the subaccount's own defaults.
+     *
+     * @return $this
+     */
+    public function setSubaccounts(?array $value): self
+    {
+        return $this->setParameter('subaccounts', $value);
+    }
+
+    /**
+     * Chapa takes subaccounts as a list of objects. A bare id string is the
+     * easy mistake to make, so accept it rather than silently dropping a split.
+     */
+    private function normaliseSubaccounts(array $subaccounts): array
+    {
+        $normalised = [];
+
+        foreach ($subaccounts as $subaccount) {
+            if (is_string($subaccount) && $subaccount !== '') {
+                $normalised[] = ['id' => $subaccount];
+                continue;
+            }
+
+            if (is_array($subaccount) && ($subaccount['id'] ?? '') !== '') {
+                $normalised[] = $subaccount;
+            }
+        }
+
+        return $normalised;
+    }
+
     public function getData(): array
     {
         $this->validate('secretKey', 'amount', 'transactionId');
@@ -85,10 +139,21 @@ class PurchaseRequest extends AbstractRequest
         $customization = array_filter([
             'title' => $this->getCustomizationTitle(),
             'description' => $this->getCustomizationDescription(),
+            'logo' => $this->getCustomizationLogo(),
         ], static fn ($value): bool => $value !== null && $value !== '');
 
         if ($customization !== []) {
             $data['customization'] = $customization;
+        }
+
+        // Chapa takes subaccounts at the root of the payload. The chapa-laravel
+        // README documents `customization[subaccounts][id]`, but their nestjs
+        // InitializeOptions interface and the split-payment docs both put it
+        // here, and that README is wrong about several other things.
+        $subaccounts = $this->normaliseSubaccounts($this->getSubaccounts() ?? []);
+
+        if ($subaccounts !== []) {
+            $data['subaccounts'] = $subaccounts;
         }
 
         return $data;

@@ -15,8 +15,9 @@ local payment methods such as telebirr, CBE Birr, M-Pesa and Amole alongside car
 **Not yet released to Packagist.**
 
 Implemented and tested against mock fixtures: hosted checkout (`purchase`,
-`completePurchase`), webhooks (`acceptNotification`), and payouts (`transfer`,
-`fetchTransfer`, `fetchBanks`). Bulk transfers are not implemented.
+`completePurchase`, `mobileInitialize`), webhooks (`acceptNotification`), payouts
+(`transfer`, `fetchTransfer`, `bulkTransfer`, `fetchBanks`) and split payments
+(`createSubaccount`). This covers everything Chapa's official Laravel package exposes.
 
 The library has not been exercised against Chapa's live sandbox, so treat the first
 integration as unverified against the real service. Chapa does not publish the full shape of
@@ -75,16 +76,50 @@ if ($response->isSuccessful()) {
 ```
 
 `transactionId` is Chapa's `tx_ref` — you choose it, and it is what you verify against later.
-`returnUrl` is where the browser lands; `notifyUrl` maps to Chapa's `callback_url`, the
-server-to-server callback. `currency` defaults to `ETB`.
+If you don't pass it to `completePurchase()`, it is read from the incoming request, since
+Chapa appends the reference when it sends the customer back. An explicit value always wins.
 
-To brand the hosted checkout page, pass `customizationTitle` and `customizationDescription`
-to `purchase()`. The description falls back to the standard Omnipay `description` parameter.
+`returnUrl` is where the browser lands; `notifyUrl` maps to Chapa's `callback_url`.
+`currency` defaults to `ETB`.
+
+To brand the hosted checkout page, pass `customizationTitle`, `customizationDescription` and
+`customizationLogo` to `purchase()`. The description falls back to the standard Omnipay
+`description` parameter.
+
+`mobileInitialize()` takes the same parameters as `purchase()` against Chapa's mobile
+endpoint.
+
+## callback_url is not the webhook
+
+These are two different mechanisms and it is easy to conflate them:
+
+| | `callback_url` (`notifyUrl`) | Dashboard webhook |
+|---|---|---|
+| Method | `GET` | `POST` |
+| Carries | `trx_ref`, `ref_id`, `status` as query params | JSON body |
+| Signed | **No** | Yes, `x-chapa-signature` |
+| Handle with | `completePurchase()` | `acceptNotification()` |
+
+Pointing `notifyUrl` at the endpoint you call `acceptNotification()` on will fail every time
+with `Missing x-chapa-signature header`, because the callback carries no signature.
+
+The callback is **unauthenticated** — anyone can hit that URL with any query string. Treat it
+only as a nudge to go and verify:
+
+```php
+// callback_url handler - nothing here is trusted
+$response = $gateway->completePurchase()->send();   // reads trx_ref from the request
+
+if ($response->isSuccessful()) {
+    // Now you know.
+}
+```
 
 ## Webhooks
 
-Point Chapa's `callback_url` at your endpoint and set the webhook secret from the Chapa
-dashboard. It falls back to the API secret key if you don't set it separately.
+Register the webhook URL in the Chapa dashboard — **not** as `callback_url`, per the section
+above — and set the webhook secret from there too. It falls back to the API secret key if you
+don't set it separately.
 
 ```php
 $gateway->setWebhookSecret('...');
@@ -143,6 +178,55 @@ $status = $gateway->fetchTransfer(['transactionId' => 'payout-0001'])->send();
 
 A wrong `bank_code` sends money to a valid account at the wrong bank, so resolve codes
 through `fetchBanks()` rather than hard-coding them.
+
+Many payouts at once:
+
+```php
+$gateway->bulkTransfer([
+    'title'    => 'January payouts',
+    'bulkData' => [
+        [
+            'account_name'   => 'Israel Goytom',
+            'account_number' => '1000212659000',
+            'amount'         => 100,
+            'reference'      => 'payout-0001',
+            'bank_code'      => 946,
+        ],
+    ],
+])->send();
+```
+
+Every row must carry all five fields; an incomplete one is rejected before the batch is sent.
+A successful response means the batch was queued, not that rows settled — confirm each with
+`fetchTransfer()` on its reference.
+
+## Split payments
+
+Create a subaccount, then reference it when charging:
+
+```php
+$id = $gateway->createSubaccount([
+    'businessName'  => 'Example Vendor',
+    'accountName'   => 'Israel Goytom',
+    'accountNumber' => '1000212659000',
+    'bankCode'      => '946',
+    'splitType'     => 'percentage',   // or 'flat'
+    'splitValue'    => 0.03,           // 3%, or a flat amount when splitType is 'flat'
+])->send()->getSubaccountId();
+
+$gateway->purchase([
+    'amount'        => '100.00',
+    'transactionId' => 'order-1234',
+    'subaccounts'   => [$id],   // or ['id' => $id, 'split_type' => 'flat', 'transaction_charge' => 25]
+])->send();
+```
+
+> **The subaccount endpoint is unverified.** Chapa gives three different answers for it: their
+> split-payment docs and their NestJS SDK say `POST /v1/subaccount`, their own Laravel package
+> posts to `/sub-accounts`, and its README says `GET https://api.chapa.dev/v1/transaction/sub-accounts`.
+> This package defaults to `/subaccount` on the strength of two sources against one. If your
+> account behaves differently, override it without forking:
+> `$request->setEndpointPath('/sub-accounts')`.
 
 ## Development
 

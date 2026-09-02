@@ -3,8 +3,11 @@
 namespace Omnipay\Chapa\Tests;
 
 use Omnipay\Chapa\Gateway;
+use Omnipay\Chapa\Message\BulkTransferRequest;
+use Omnipay\Chapa\Message\CreateSubaccountRequest;
 use Omnipay\Chapa\Message\FetchBanksRequest;
 use Omnipay\Chapa\Message\FetchTransferRequest;
+use Omnipay\Chapa\Message\MobileInitializeRequest;
 use Omnipay\Chapa\Message\TransferRequest;
 use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Tests\GatewayTestCase;
@@ -64,6 +67,42 @@ class GatewayTest extends GatewayTestCase
             $this->gateway->fetchTransfer(['transactionId' => 'payout-0001'])
         );
         $this->assertInstanceOf(FetchBanksRequest::class, $this->gateway->fetchBanks());
+    }
+
+    public function testExposesSplitPaymentAndBulkMethods(): void
+    {
+        $this->assertInstanceOf(
+            CreateSubaccountRequest::class,
+            $this->gateway->createSubaccount(['businessName' => 'Example Vendor'])
+        );
+        $this->assertInstanceOf(
+            BulkTransferRequest::class,
+            $this->gateway->bulkTransfer(['title' => 'January payouts'])
+        );
+        $this->assertInstanceOf(
+            MobileInitializeRequest::class,
+            $this->gateway->mobileInitialize(['amount' => '100.00'])
+        );
+    }
+
+    /**
+     * Mobile initialize shares the purchase payload and differs only in the
+     * endpoint it posts to.
+     */
+    public function testMobileInitializeUsesItsOwnEndpoint(): void
+    {
+        $this->setMockHttpResponse('PurchaseSuccess.txt');
+
+        $this->gateway->mobileInitialize([
+            'amount' => '100.00',
+            'currency' => 'ETB',
+            'transactionId' => 'order-1234',
+        ])->send();
+
+        $this->assertSame(
+            'https://api.chapa.co/v1/transaction/mobile-initialize',
+            (string) $this->getMockClient()->getLastRequest()->getUri()
+        );
     }
 
     public function testAcceptNotificationRejectsUnsignedWebhook(): void

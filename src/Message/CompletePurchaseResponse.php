@@ -89,4 +89,25 @@ class CompletePurchaseResponse extends AbstractResponse
     {
         return $this->getPaymentValue('mode');
     }
+
+    /**
+     * The title, description and logo the checkout page was rendered with.
+     *
+     * @return array<string, mixed>
+     */
+    public function getCustomization(): array
+    {
+        $customization = $this->getPaymentData()['customization'] ?? null;
+
+        return is_array($customization) ? $customization : [];
+    }
+
+    /**
+     * Whatever was passed as `meta` at initialize time. Chapa echoes it back
+     * untouched, and its shape is entirely the merchant's own.
+     */
+    public function getMeta()
+    {
+        return $this->getPaymentData()['meta'] ?? null;
+    }
 }

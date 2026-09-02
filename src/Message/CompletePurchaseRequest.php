@@ -2,6 +2,7 @@
 
 namespace Omnipay\Chapa\Message;
 
+use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Common\Message\ResponseInterface;
 
 /**
@@ -14,9 +15,50 @@ use Omnipay\Common\Message\ResponseInterface;
  */
 class CompletePurchaseRequest extends AbstractRequest
 {
+    /**
+     * Chapa's callback carries `trx_ref`, not the `tx_ref` spelling used in the
+     * initialize payload. Both are accepted here so a caller who redirects
+     * through either does not have to know which one arrived.
+     */
+    private const REFERENCE_KEYS = ['trx_ref', 'tx_ref'];
+
+    /**
+     * Falls back to the reference on the incoming request, which is what Chapa
+     * appends when returning the customer. An explicitly set transactionId
+     * always wins - the request is attacker-controlled and only ever selects
+     * which transaction to verify, never what its outcome was.
+     */
+    public function getTransactionId(): ?string
+    {
+        $explicit = parent::getTransactionId();
+
+        if ($explicit !== null && $explicit !== '') {
+            return (string) $explicit;
+        }
+
+        foreach (self::REFERENCE_KEYS as $key) {
+            foreach ([$this->httpRequest->query, $this->httpRequest->request] as $bag) {
+                $value = $bag->get($key);
+
+                if (is_string($value) && $value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function getData(): array
     {
-        $this->validate('secretKey', 'transactionId');
+        $this->validate('secretKey');
+
+        // Not $this->validate('transactionId'): that reads the parameter bag
+        // directly and so would reject a reference that only exists on the
+        // incoming request.
+        if (($this->getTransactionId() ?? '') === '') {
+            throw new InvalidRequestException('The transactionId parameter is required');
+        }
 
         return [];
     }

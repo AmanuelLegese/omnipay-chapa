@@ -2,9 +2,12 @@
 
 namespace Omnipay\Chapa;
 
+use Omnipay\Chapa\Message\BulkTransferRequest;
 use Omnipay\Chapa\Message\CompletePurchaseRequest;
+use Omnipay\Chapa\Message\CreateSubaccountRequest;
 use Omnipay\Chapa\Message\FetchBanksRequest;
 use Omnipay\Chapa\Message\FetchTransferRequest;
+use Omnipay\Chapa\Message\MobileInitializeRequest;
 use Omnipay\Chapa\Message\Notification;
 use Omnipay\Chapa\Message\PurchaseRequest;
 use Omnipay\Chapa\Message\TransferRequest;
@@ -87,6 +90,23 @@ class Gateway extends AbstractGateway
     }
 
     /**
+     * Same as purchase(), against Chapa's mobile initialize endpoint.
+     */
+    public function mobileInitialize(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(MobileInitializeRequest::class, $parameters);
+    }
+
+    /**
+     * Create a subaccount to split payments with. The id it returns goes in
+     * `subaccounts` on purchase().
+     */
+    public function createSubaccount(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(CreateSubaccountRequest::class, $parameters);
+    }
+
+    /**
      * Verify and parse an incoming Chapa webhook.
      *
      * Unlike the request methods this returns the notification directly - there
@@ -118,6 +138,15 @@ class Gateway extends AbstractGateway
     public function fetchTransfer(array $parameters = []): AbstractRequest
     {
         return $this->createRequest(FetchTransferRequest::class, $parameters);
+    }
+
+    /**
+     * Send many payouts in one call. Queuing is not settlement - confirm each
+     * row with fetchTransfer() on its reference.
+     */
+    public function bulkTransfer(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(BulkTransferRequest::class, $parameters);
     }
 
     /**

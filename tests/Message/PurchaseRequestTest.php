@@ -103,6 +103,69 @@ class PurchaseRequestTest extends TestCase
         $this->assertArrayNotHasKey('customization', $this->request->getData());
     }
 
+    public function testSendsCustomizationLogo(): void
+    {
+        $this->request->setCustomizationLogo('https://example.com/logo.png');
+
+        $this->assertSame(
+            ['logo' => 'https://example.com/logo.png'],
+            $this->request->getData()['customization']
+        );
+    }
+
+    /**
+     * Chapa's own sources disagree here: the chapa-laravel README documents
+     * `customization[subaccounts][id]`, while their nestjs InitializeOptions
+     * interface and the split-payment docs both put subaccounts at the root.
+     * Two sources to one, so the root placement is what we send - and this test
+     * exists to stop anyone "fixing" it back on the strength of that README.
+     */
+    public function testSubaccountsSerialiseAtTopLevelNotUnderCustomization(): void
+    {
+        $this->request->setCustomizationTitle('Example Store');
+        $this->request->setSubaccounts([['id' => 'ac2e6b5b-0e76-464a-8c20-2d441fbaca6c']]);
+
+        $data = $this->request->getData();
+
+        $this->assertSame(
+            [['id' => 'ac2e6b5b-0e76-464a-8c20-2d441fbaca6c']],
+            $data['subaccounts']
+        );
+        $this->assertArrayNotHasKey('subaccounts', $data['customization']);
+    }
+
+    public function testSubaccountsCarryPerTransactionSplitOverrides(): void
+    {
+        $this->request->setSubaccounts([
+            ['id' => 'sub-1', 'split_type' => 'percentage', 'transaction_charge' => 0.03],
+            ['id' => 'sub-2'],
+        ]);
+
+        $this->assertSame([
+            ['id' => 'sub-1', 'split_type' => 'percentage', 'transaction_charge' => 0.03],
+            ['id' => 'sub-2'],
+        ], $this->request->getData()['subaccounts']);
+    }
+
+    /**
+     * A bare id string is the easy mistake; normalising it means a split that
+     * would otherwise be silently dropped still reaches Chapa.
+     */
+    public function testAcceptsSubaccountIdsAsPlainStrings(): void
+    {
+        $this->request->setSubaccounts(['sub-1', 'sub-2']);
+
+        $this->assertSame(
+            [['id' => 'sub-1'], ['id' => 'sub-2']],
+            $this->request->getData()['subaccounts']
+        );
+    }
+
+    public function testOmitsSubaccountsWhenUnset(): void
+    {
+        $this->assertArrayNotHasKey('subaccounts', $this->request->getData());
+    }
+
     public function testRequiresSecretKey(): void
     {
         $request = new PurchaseRequest($this->getHttpClient(), $this->getHttpRequest());
