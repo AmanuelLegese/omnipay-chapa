@@ -1,0 +1,4 @@
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{"message":"We cannot process refund for this transaction. Transaction not found.","status":"failed","data":null}

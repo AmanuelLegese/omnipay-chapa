@@ -27,10 +27,14 @@ abstract class AbstractResponse extends OmnipayAbstractResponse
      * per-field errors when validation fails, e.g.
      * {"message": {"amount": ["The amount field is required."]}}.
      * Flatten that so callers always get a string.
+     *
+     * Some endpoints put those field errors under `validate` instead and send
+     * no `message` at all - observed on POST /subaccount with a missing
+     * split_type - so fall back to that key.
      */
     public function getMessage(): ?string
     {
-        $message = $this->data['message'] ?? null;
+        $message = $this->data['message'] ?? $this->data['validate'] ?? null;
 
         if (is_string($message)) {
             return $message !== '' ? $message : null;

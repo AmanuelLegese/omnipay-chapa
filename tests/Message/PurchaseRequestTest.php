@@ -161,6 +161,37 @@ class PurchaseRequestTest extends TestCase
         );
     }
 
+    public function testSendsMetaAsAnObject(): void
+    {
+        $this->request->setMeta(['order_id' => 'A-1', 'hide_receipt' => true]);
+
+        $data = $this->request->getData();
+
+        $this->assertSame(['order_id' => 'A-1', 'hide_receipt' => true], $data['meta']);
+        $this->assertSame('{"order_id":"A-1","hide_receipt":true}', json_encode($data['meta']));
+    }
+
+    /**
+     * An empty array would encode as a JSON list, `[]`, where Chapa expects an
+     * object - so it is left out altogether.
+     */
+    public function testOmitsEmptyMeta(): void
+    {
+        $this->request->setMeta([]);
+
+        $this->assertArrayNotHasKey('meta', $this->request->getData());
+    }
+
+    public function testRejectsListMeta(): void
+    {
+        $this->request->setMeta(['A-1', 'B-2']);
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage('The meta parameter must be an array with named keys');
+
+        $this->request->getData();
+    }
+
     public function testOmitsSubaccountsWhenUnset(): void
     {
         $this->assertArrayNotHasKey('subaccounts', $this->request->getData());

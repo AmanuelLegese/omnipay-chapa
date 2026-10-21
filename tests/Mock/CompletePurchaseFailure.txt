@@ -1,4 +1,4 @@
-HTTP/1.1 404 Not Found
+HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":"Transaction not found.","status":"failed","data":null}
+{"message":"Invalid transaction reference","status":"failed","data":null}

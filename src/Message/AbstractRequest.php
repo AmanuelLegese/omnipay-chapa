@@ -48,6 +48,15 @@ abstract class AbstractRequest extends OmnipayAbstractRequest
     }
 
     /**
+     * Whether the configured secret key is a test-mode key. Chapa marks those
+     * with a CHASECK_TEST- prefix; live keys have none.
+     */
+    public function isTestKey(): bool
+    {
+        return str_starts_with((string) $this->getSecretKey(), 'CHASECK_TEST-');
+    }
+
+    /**
      * The secret Chapa signs webhooks with. Configured separately in the Chapa
      * dashboard; falls back to the API secret key when not set.
      */
@@ -80,7 +89,10 @@ abstract class AbstractRequest extends OmnipayAbstractRequest
             $data === [] ? null : json_encode($data)
         );
 
-        $payload = json_decode((string) $httpResponse->getBody(), true);
+        // Chapa sends some identifiers as bare JSON integers - a refund's
+        // bank_reference is 16 digits. Without this flag a 32-bit PHP decodes
+        // those to floats and they come back in scientific notation.
+        $payload = json_decode((string) $httpResponse->getBody(), true, 512, JSON_BIGINT_AS_STRING);
 
         // An outage or a proxy can answer with HTML or an empty body. Decoding
         // that yields null, which would otherwise surface as a silent failure

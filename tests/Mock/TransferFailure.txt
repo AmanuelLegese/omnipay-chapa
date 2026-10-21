@@ -1,4 +1,4 @@
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":{"bank_code":["The selected bank code is invalid."]},"status":"failed","data":null}
+{"message":{"reference":["The reference field need to be 36 characters or less"]},"status":"failed","data":null}

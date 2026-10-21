@@ -11,6 +11,23 @@ namespace Omnipay\Chapa\Message;
  */
 class FetchTransferResponse extends AbstractResponse
 {
+    /**
+     * Test mode answers every transfer verify with `data: [null]` - a list, not
+     * an object - even for a transfer created a moment earlier. Whether live
+     * mode wraps the record in a list too could not be confirmed from test
+     * mode, so accept both: unwrap a list to its first object.
+     */
+    protected function getPaymentData(): array
+    {
+        $data = $this->data['data'] ?? null;
+
+        if (is_array($data) && array_is_list($data)) {
+            $data = $data[0] ?? null;
+        }
+
+        return is_array($data) ? $data : [];
+    }
+
     public function isSuccessful(): bool
     {
         return $this->getTransferStatus() === 'success';

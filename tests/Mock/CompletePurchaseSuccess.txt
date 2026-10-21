@@ -1,4 +1,4 @@
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"message":"Payment details","status":"success","data":{"first_name":"Bilen","last_name":"Gizachew","email":"abebech_bekele@gmail.com","currency":"ETB","amount":100,"charge":3.5,"mode":"test","method":"telebirr","type":"API","status":"success","reference":"6jnheVKQEmy","tx_ref":"chewatatest-6669","created_at":"2023-02-02T07:05:23.000000Z","updated_at":"2023-02-02T07:05:23.000000Z"}}
+{"message":"Payment details fetched successfully","status":"success","data":{"first_name":"Probe","last_name":"Test","email":null,"phone_number":"251900123456","currency":"ETB","amount":10,"charge":0.25,"mode":"test","method":"test","type":"API","status":"success","reference":"APjTAGhdvZTaI","tx_ref":"omnipay-chapa-probe-tx4-1789327377","customization":{"title":null,"description":null,"logo":null},"meta":null,"created_at":"2026-09-13T19:24:29.000000Z","updated_at":"2026-09-13T19:24:29.000000Z"}}

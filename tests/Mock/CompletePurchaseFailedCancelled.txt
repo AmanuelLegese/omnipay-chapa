@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Payment details fetched successfully","status":"success","data":{"first_name":"Probe","last_name":"Test","email":null,"phone_number":"251900123456","currency":"ETB","amount":10,"charge":0.25,"mode":"test","method":"test","type":"API","status":"failed\/cancelled","reference":"APLZNciifiVuG","tx_ref":"omnipay-chapa-probe-tx2-1789327044","customization":{"title":null,"description":null,"logo":null},"meta":null,"created_at":"2026-09-13T19:19:34.000000Z","updated_at":"2026-09-13T19:19:34.000000Z"}}

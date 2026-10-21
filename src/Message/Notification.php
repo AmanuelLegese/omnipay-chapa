@@ -63,7 +63,7 @@ class Notification implements NotificationInterface
             throw new InvalidRequestException('Invalid Chapa webhook signature');
         }
 
-        $decoded = json_decode($body, true);
+        $decoded = json_decode($body, true, 512, JSON_BIGINT_AS_STRING);
         $this->data = is_array($decoded) ? $decoded : [];
     }
 
@@ -73,29 +73,79 @@ class Notification implements NotificationInterface
     }
 
     /**
-     * Chapa's own reference, falling back to the merchant's tx_ref when the
-     * event carries no reference of its own.
+     * The event name, e.g. `charge.success`, `charge.refunded`,
+     * `payout.success`.
      */
-    public function getTransactionReference(): ?string
+    public function getEvent(): ?string
     {
-        foreach (['reference', 'tx_ref'] as $key) {
-            $value = $this->data[$key] ?? null;
-            if (is_scalar($value) && $value !== '') {
-                return (string) $value;
-            }
-        }
-
-        return null;
+        return $this->value('event');
     }
 
     /**
+     * A customer payment event. Chapa delivers these and payout events to the
+     * same URL with the same signature, so check this before treating a
+     * completed event as a paid order.
+     */
+    public function isCharge(): bool
+    {
+        $event = $this->getEvent();
+
+        if ($event !== null) {
+            return str_starts_with($event, 'charge.');
+        }
+
+        return !$this->isPayout() && $this->value('tx_ref') !== null;
+    }
+
+    /**
+     * A payout (transfer) event.
+     */
+    public function isPayout(): bool
+    {
+        $event = $this->getEvent();
+
+        if ($event !== null) {
+            return str_starts_with($event, 'payout.');
+        }
+
+        return strcasecmp((string) $this->value('type'), 'Payout') === 0;
+    }
+
+    /**
+     * The merchant's own identifier: the tx_ref for a charge, or the reference
+     * the merchant gave a payout.
+     *
+     * Kept separate from getTransactionReference() on purpose. A payout's
+     * `reference` is the merchant's own payout id; reading it as a payment
+     * reference is how a completed payout gets mistaken for a paid order.
+     */
+    public function getTransactionId(): ?string
+    {
+        return $this->isPayout() ? $this->value('reference') : $this->value('tx_ref');
+    }
+
+    /**
+     * Chapa's identifier: `reference` for a charge (what refund() needs), or
+     * `chapa_reference` for a payout.
+     */
+    public function getTransactionReference(): ?string
+    {
+        return $this->isPayout() ? $this->value('chapa_reference') : $this->value('reference');
+    }
+
+    /**
+     * Omnipay's three-state status. NotificationInterface has no room for
+     * refunds, so `refunded` and `reversed` report as failed here; use
+     * isRefunded() / isReversed() or getStatus() to tell them apart.
+     *
+     * This describes whichever kind of event it is. A payout.success is also
+     * completed - which is exactly why isCharge() must be checked first.
+     *
      * @return NotificationInterface::STATUS_*
      */
     public function getTransactionStatus(): string
     {
-        $status = $this->data['status'] ?? null;
-
-        return match ($status) {
+        return match ($this->getStatus()) {
             'success' => self::STATUS_COMPLETED,
             'pending' => self::STATUS_PENDING,
             // Anything unrecognised is treated as failed rather than assumed
@@ -104,15 +154,69 @@ class Notification implements NotificationInterface
         };
     }
 
+    /**
+     * Chapa's raw status: success, pending, refunded, reversed, or the single
+     * combined string `failed/cancelled`.
+     */
+    public function getStatus(): ?string
+    {
+        return $this->value('status');
+    }
+
+    /**
+     * A charge that was refunded. Reported as STATUS_FAILED by
+     * getTransactionStatus(), but the money was taken first - do not read it as
+     * a payment that never happened.
+     */
+    public function isRefunded(): bool
+    {
+        return $this->getStatus() === 'refunded';
+    }
+
+    public function isReversed(): bool
+    {
+        return $this->getStatus() === 'reversed';
+    }
+
+    /**
+     * How the customer paid. Webhooks call this `payment_method`, while the
+     * verify endpoint calls the same thing `method`.
+     */
+    public function getPaymentMethod(): ?string
+    {
+        return $this->value('payment_method') ?? $this->value('method');
+    }
+
+    public function getAmount(): ?string
+    {
+        return $this->value('amount');
+    }
+
+    public function getCurrency(): ?string
+    {
+        return $this->value('currency');
+    }
+
+    /**
+     * Chapa's explanation on a failed charge, e.g. a USSD prompt that timed out.
+     */
+    public function getFailureReason(): ?string
+    {
+        return $this->value('failure_reason');
+    }
+
+    /**
+     * The failure reason when there is one, otherwise the event name.
+     */
     public function getMessage(): ?string
     {
-        foreach (['event', 'message'] as $key) {
-            $value = $this->data[$key] ?? null;
-            if (is_string($value) && $value !== '') {
-                return $value;
-            }
-        }
+        return $this->getFailureReason() ?? $this->getEvent() ?? $this->value('message');
+    }
 
-        return null;
+    private function value(string $key): ?string
+    {
+        $value = $this->data[$key] ?? null;
+
+        return is_scalar($value) && $value !== '' ? (string) $value : null;
     }
 }

@@ -6,9 +6,13 @@ use Omnipay\Chapa\Gateway;
 use Omnipay\Chapa\Message\BulkTransferRequest;
 use Omnipay\Chapa\Message\CreateSubaccountRequest;
 use Omnipay\Chapa\Message\FetchBanksRequest;
+use Omnipay\Chapa\Message\FetchRefundRequest;
+use Omnipay\Chapa\Message\FetchTransactionRequest;
 use Omnipay\Chapa\Message\FetchTransferRequest;
 use Omnipay\Chapa\Message\MobileInitializeRequest;
+use Omnipay\Chapa\Message\RefundRequest;
 use Omnipay\Chapa\Message\TransferRequest;
+use Omnipay\Chapa\Message\VoidRequest;
 use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Tests\GatewayTestCase;
 
@@ -32,16 +36,18 @@ class GatewayTest extends GatewayTestCase
         $this->assertSame('Chapa', $this->gateway->getShortName());
     }
 
-    public function testSupportsCheckoutAndNotifications(): void
+    public function testSupportsTheStandardMethodsChapaOffers(): void
     {
         $this->assertTrue($this->gateway->supportsPurchase());
         $this->assertTrue($this->gateway->supportsCompletePurchase());
         $this->assertTrue($this->gateway->supportsAcceptNotification());
+        $this->assertTrue($this->gateway->supportsFetchTransaction());
+        $this->assertTrue($this->gateway->supportsRefund());
+        $this->assertTrue($this->gateway->supportsVoid());
 
+        // Chapa has no separate authorize/capture step.
         $this->assertFalse($this->gateway->supportsAuthorize());
         $this->assertFalse($this->gateway->supportsCapture());
-        $this->assertFalse($this->gateway->supportsRefund());
-        $this->assertFalse($this->gateway->supportsVoid());
     }
 
     public function testWebhookSecretFallsBackToSecretKey(): void
@@ -67,6 +73,26 @@ class GatewayTest extends GatewayTestCase
             $this->gateway->fetchTransfer(['transactionId' => 'payout-0001'])
         );
         $this->assertInstanceOf(FetchBanksRequest::class, $this->gateway->fetchBanks());
+    }
+
+    public function testExposesRefundVoidAndFetchMethods(): void
+    {
+        $this->assertInstanceOf(
+            FetchTransactionRequest::class,
+            $this->gateway->fetchTransaction(['transactionId' => 'order-1234'])
+        );
+        $this->assertInstanceOf(
+            RefundRequest::class,
+            $this->gateway->refund(['transactionReference' => 'APjTAGhdvZTaI'])
+        );
+        $this->assertInstanceOf(
+            FetchRefundRequest::class,
+            $this->gateway->fetchRefund(['refundId' => 'TEST-DIS-REF-hiZb0ylpDzo'])
+        );
+        $this->assertInstanceOf(
+            VoidRequest::class,
+            $this->gateway->void(['transactionId' => 'order-1234'])
+        );
     }
 
     public function testExposesSplitPaymentAndBulkMethods(): void
@@ -137,10 +163,10 @@ class GatewayTest extends GatewayTestCase
         $this->setMockHttpResponse('CompletePurchaseSuccess.txt');
 
         $response = $this->gateway->completePurchase([
-            'transactionId' => 'chewatatest-6669',
+            'transactionId' => 'omnipay-chapa-probe-tx4-1789327377',
         ])->send();
 
         $this->assertTrue($response->isSuccessful());
-        $this->assertSame('6jnheVKQEmy', $response->getTransactionReference());
+        $this->assertSame('APjTAGhdvZTaI', $response->getTransactionReference());
     }
 }
