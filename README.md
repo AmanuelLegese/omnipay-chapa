@@ -12,20 +12,22 @@ local payment methods such as telebirr, CBE Birr, M-Pesa and Amole alongside car
 
 ## Status
 
-**Not yet released to Packagist.**
+Pre-1.0: minor versions may still change the API. See [CHANGELOG.md](CHANGELOG.md).
 
 Implemented and tested against mock fixtures: hosted checkout (`purchase`,
-`completePurchase`, `mobileInitialize`), webhooks (`acceptNotification`), payouts
+`completePurchase`, `mobileInitialize`, `fetchTransaction`), refunds (`refund`,
+`fetchRefund`), cancellation (`void`), webhooks (`acceptNotification`), payouts
 (`transfer`, `fetchTransfer`, `bulkTransfer`, `fetchBanks`) and split payments
 (`createSubaccount`). This covers everything Chapa's official Laravel package exposes.
 
-The library has not been exercised against Chapa's live sandbox, so treat the first
-integration as unverified against the real service. Chapa does not publish the full shape of
-the transfer `data` object, so those accessors are the least certain part of the package.
+Where the code says behaviour was confirmed against the API, that means Chapa's test mode.
+Nothing has been exercised with a live key, so treat the first live integration as
+unverified. Chapa does not publish the full shape of the transfer `data` object, so those
+accessors are the least certain part of the package.
 
 ## Installation
 
-Once released, install via [Composer](https://getcomposer.org/):
+Install via [Composer](https://getcomposer.org/):
 
 ```
 composer require amanuellegese/omnipay-chapa
@@ -251,12 +253,29 @@ docker compose run --rm test
 To reproduce a CI matrix cell, pick the PHP version:
 
 ```
-PHP_VERSION=8.1 docker compose build
-PHP_VERSION=8.1 docker compose run --rm test
+PHP_VERSION=8.2 docker compose build
+PHP_VERSION=8.2 docker compose run --rm test
 ```
 
 If your user id is not 1000, put `UID` and `GID` in a `.env` file so `vendor/` is not
 written as root.
+
+### Releasing
+
+1. Move the `[Unreleased]` entries in [CHANGELOG.md](CHANGELOG.md) under a new version
+   heading, e.g. `## [0.2.0] - 2026-11-01`, update the compare links at the bottom, and
+   merge that to `master`.
+2. Tag the merge commit and push the tag:
+
+   ```
+   git tag -a v0.2.0 -m v0.2.0
+   git push origin v0.2.0
+   ```
+
+The release workflow runs the full test matrix, checks the tag is on `master`, and
+publishes a GitHub Release whose notes are that version's changelog section. It fails
+if the section is missing. A tag with a suffix such as `v0.2.0-rc.1` is marked as a
+pre-release. Packagist picks up the tag on its own.
 
 ## Support
 
