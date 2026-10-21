@@ -2,6 +2,7 @@
 
 namespace Omnipay\Chapa\Message;
 
+use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Common\Message\ResponseInterface;
 
 /**
@@ -166,6 +167,12 @@ class PurchaseRequest extends AbstractRequest
 
         // An empty array would encode as a JSON list, not an object.
         if ($meta = $this->getMeta()) {
+            // A list would too, and Chapa reads meta by key - so refuse it
+            // rather than send a payload whose keys are 0, 1, 2.
+            if (array_is_list($meta)) {
+                throw new InvalidRequestException('The meta parameter must be an array with named keys');
+            }
+
             $data['meta'] = $meta;
         }
 

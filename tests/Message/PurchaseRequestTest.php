@@ -182,6 +182,16 @@ class PurchaseRequestTest extends TestCase
         $this->assertArrayNotHasKey('meta', $this->request->getData());
     }
 
+    public function testRejectsListMeta(): void
+    {
+        $this->request->setMeta(['A-1', 'B-2']);
+
+        $this->expectException(InvalidRequestException::class);
+        $this->expectExceptionMessage('The meta parameter must be an array with named keys');
+
+        $this->request->getData();
+    }
+
     public function testOmitsSubaccountsWhenUnset(): void
     {
         $this->assertArrayNotHasKey('subaccounts', $this->request->getData());
