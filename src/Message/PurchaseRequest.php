@@ -82,6 +82,24 @@ class PurchaseRequest extends AbstractRequest
         return $this->setParameter('subaccounts', $value);
     }
 
+    public function getMeta(): ?array
+    {
+        return $this->getParameter('meta');
+    }
+
+    /**
+     * Arbitrary data attached to the transaction and echoed back untouched on
+     * verify and in the webhook - confirmed round-tripping against the API.
+     * Chapa also reads some keys itself, e.g. `hide_receipt` and
+     * `payment_reason`.
+     *
+     * @return $this
+     */
+    public function setMeta(?array $value): self
+    {
+        return $this->setParameter('meta', $value);
+    }
+
     /**
      * Chapa takes subaccounts as a list of objects. A bare id string is the
      * easy mistake to make, so accept it rather than silently dropping a split.
@@ -144,6 +162,11 @@ class PurchaseRequest extends AbstractRequest
 
         if ($customization !== []) {
             $data['customization'] = $customization;
+        }
+
+        // An empty array would encode as a JSON list, not an object.
+        if ($meta = $this->getMeta()) {
+            $data['meta'] = $meta;
         }
 
         // Chapa takes subaccounts at the root of the payload. The chapa-laravel

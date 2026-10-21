@@ -1,0 +1,4 @@
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+
+{"message":"Please wait at least 5 seconds before submitting another request.","status":"failed","data":null}

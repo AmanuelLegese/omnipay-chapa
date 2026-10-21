@@ -1,4 +1,4 @@
 HTTP/1.1 400 Bad Request
 Content-Type: application/json
 
-{"message":{"account_number":["The account number is invalid."]},"status":"failed","data":null}
+{"message":"The Bank Code is incorrect please check if it does exist with our getbanks endpoint.","status":"failed","data":null}

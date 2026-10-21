@@ -2,6 +2,7 @@
 
 namespace Omnipay\Chapa\Message;
 
+use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Common\Message\ResponseInterface;
 
 /**
@@ -15,6 +16,11 @@ use Omnipay\Common\Message\ResponseInterface;
  */
 class TransferRequest extends AbstractRequest
 {
+    /**
+     * Longest reference Chapa accepts on a transfer, confirmed against the API.
+     */
+    public const MAX_REFERENCE_LENGTH = 36;
+
     public function getAccountNumber(): ?string
     {
         return $this->getParameter('accountNumber');
@@ -54,6 +60,25 @@ class TransferRequest extends AbstractRequest
         return $this->setParameter('bankCode', $value);
     }
 
+    public function getTestStatus(): ?string
+    {
+        return $this->getParameter('testStatus');
+    }
+
+    /**
+     * Force the outcome of a test-mode payout: success, failed or pending.
+     *
+     * Creation still reports "queued" whatever this is set to, and test mode
+     * stubs out transfer verification, so the forced outcome only shows up in
+     * the payout webhook. Refused outright with a live key.
+     *
+     * @return $this
+     */
+    public function setTestStatus(?string $value): self
+    {
+        return $this->setParameter('testStatus', $value);
+    }
+
     public function getData(): array
     {
         $this->validate('secretKey', 'amount', 'accountNumber', 'bankCode');
@@ -72,7 +97,24 @@ class TransferRequest extends AbstractRequest
         // Chapa generates a reference when none is given, but then the only
         // way to find the payout again is to read it back off the response.
         if ($reference = $this->getTransactionId()) {
+            // Chapa rejects anything longer with "The reference field need to
+            // be 36 characters or less". Catching it here means the payout is
+            // never sent, rather than sent and bounced.
+            if (strlen($reference) > self::MAX_REFERENCE_LENGTH) {
+                throw new InvalidRequestException(sprintf(
+                    'The transactionId must be %d characters or fewer for a transfer; got %d',
+                    self::MAX_REFERENCE_LENGTH,
+                    strlen($reference)
+                ));
+            }
             $data['reference'] = $reference;
+        }
+
+        if (($testStatus = $this->getTestStatus()) !== null && $testStatus !== '') {
+            if (!$this->isTestKey()) {
+                throw new InvalidRequestException('testStatus can only be used with a CHASECK_TEST- secret key');
+            }
+            $data['status'] = $testStatus;
         }
 
         return $data;

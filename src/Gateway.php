@@ -6,11 +6,15 @@ use Omnipay\Chapa\Message\BulkTransferRequest;
 use Omnipay\Chapa\Message\CompletePurchaseRequest;
 use Omnipay\Chapa\Message\CreateSubaccountRequest;
 use Omnipay\Chapa\Message\FetchBanksRequest;
+use Omnipay\Chapa\Message\FetchRefundRequest;
+use Omnipay\Chapa\Message\FetchTransactionRequest;
 use Omnipay\Chapa\Message\FetchTransferRequest;
 use Omnipay\Chapa\Message\MobileInitializeRequest;
 use Omnipay\Chapa\Message\Notification;
 use Omnipay\Chapa\Message\PurchaseRequest;
+use Omnipay\Chapa\Message\RefundRequest;
 use Omnipay\Chapa\Message\TransferRequest;
+use Omnipay\Chapa\Message\VoidRequest;
 use Omnipay\Common\AbstractGateway;
 use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Common\Message\AbstractRequest;
@@ -87,6 +91,42 @@ class Gateway extends AbstractGateway
     public function completePurchase(array $parameters = []): AbstractRequest
     {
         return $this->createRequest(CompletePurchaseRequest::class, $parameters);
+    }
+
+    /**
+     * Verify a transaction by your tx_ref from anywhere - Omnipay's standard
+     * name for what completePurchase() does on the customer's return.
+     */
+    public function fetchTransaction(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(FetchTransactionRequest::class, $parameters);
+    }
+
+    /**
+     * Refund a payment in full, or in part when `amount` is given.
+     *
+     * Needs Chapa's `transactionReference`, not your tx_ref - see RefundRequest.
+     */
+    public function refund(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(RefundRequest::class, $parameters);
+    }
+
+    /**
+     * Check a refund's progress by the `refundId` refund() returned.
+     */
+    public function fetchRefund(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(FetchRefundRequest::class, $parameters);
+    }
+
+    /**
+     * Cancel an unpaid checkout by your tx_ref. Verify keeps reporting such a
+     * transaction as pending, so this response is the record that it happened.
+     */
+    public function void(array $parameters = []): AbstractRequest
+    {
+        return $this->createRequest(VoidRequest::class, $parameters);
     }
 
     /**

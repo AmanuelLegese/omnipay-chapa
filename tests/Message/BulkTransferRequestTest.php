@@ -81,6 +81,22 @@ class BulkTransferRequestTest extends TestCase
         $request->getData();
     }
 
+    /**
+     * Chapa allows one bulk transfer every 5 seconds and answers faster
+     * retries with HTTP 429.
+     */
+    public function testRateLimitIsReportedAsFailure(): void
+    {
+        $request = $this->bulk();
+        $this->setMockHttpResponse('BulkTransferRateLimited.txt');
+
+        /** @var BulkTransferResponse $response */
+        $response = $request->send();
+
+        $this->assertFalse($response->isSuccessful());
+        $this->assertSame('Please wait at least 5 seconds before submitting another request.', $response->getMessage());
+    }
+
     public function testPostsToBulkTransfersEndpoint(): void
     {
         $request = $this->bulk();
@@ -94,6 +110,6 @@ class BulkTransferRequestTest extends TestCase
         $this->assertSame('https://api.chapa.co/v1/bulk-transfers', (string) $httpRequest->getUri());
 
         $this->assertTrue($response->isSuccessful());
-        $this->assertSame('1234', $response->getBulkId());
+        $this->assertSame('3', $response->getBulkId());
     }
 }

@@ -1,4 +1,4 @@
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"message":"Payment details","status":"success","data":{"first_name":"Bilen","last_name":"Gizachew","email":"abebech_bekele@gmail.com","currency":"ETB","amount":100,"charge":3.5,"mode":"test","method":"telebirr","type":"API","status":"pending","reference":"6jnheVKQEmy","tx_ref":"chewatatest-6669","created_at":"2023-02-02T07:05:23.000000Z","updated_at":"2023-02-02T07:05:23.000000Z"}}
+{"message":"Payment details fetched successfully","status":"success","data":{"first_name":null,"last_name":null,"email":null,"phone_number":null,"currency":"ETB","amount":10,"charge":null,"mode":"test","method":null,"type":"Unknown","status":"pending","reference":null,"tx_ref":"ocp-meta-1789327850","customization":{"title":null,"description":null,"logo":null},"meta":{"order_id":"A-1","hide_receipt":true,"payment_reason":"probe"},"created_at":"2026-09-13T19:30:52.000000Z","updated_at":"2026-09-13T19:30:52.000000Z"}}

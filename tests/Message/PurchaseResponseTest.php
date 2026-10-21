@@ -56,10 +56,8 @@ class PurchaseResponseTest extends TestCase
         $this->assertFalse($response->isRedirect());
         $this->assertNull($response->getRedirectUrl());
         $this->assertSame('failed', $response->getCode());
-        $this->assertSame(
-            'amount: The amount field is required., currency: The currency must be ETB or USD.',
-            $response->getMessage()
-        );
+        // Chapa really does send the untranslated Laravel key here.
+        $this->assertSame('amount: validation.required', $response->getMessage());
     }
 
     /**

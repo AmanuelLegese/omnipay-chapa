@@ -1,0 +1,4 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"message":"Refund verified successfully","status":"success","data":{"amount":"5.00","currency":"ETB","ref_id":"TEST-DIS-REF-hiZb0ylpDzo","payment_reference":"APjTAGhdvZTaI","merchant_reference":"ocp-refund-1","status":"refunded","created_at":"2026-09-13T19:28:54.000000Z","updated_at":"2026-09-13T19:28:54.000000Z"}}

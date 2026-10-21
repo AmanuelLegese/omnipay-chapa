@@ -92,8 +92,25 @@ class CreateSubaccountRequestTest extends TestCase
         $response = $request->send();
 
         $this->assertTrue($response->isSuccessful());
-        // Chapa sends the id as a bare string in `data`, not an object.
-        $this->assertSame('ac2e6b5b-0e76-464a-8c20-2d441fbaca6c', $response->getSubaccountId());
+        // The real response wraps it: {"data": {"subaccount_id": ...}}, despite
+        // Chapa's nestjs SDK typing `data` as a bare string.
+        $this->assertSame('e08cd969-df6e-4fc6-b63f-ecf2e5e42361', $response->getSubaccountId());
+    }
+
+    /**
+     * This endpoint sends field errors under `validate` with no `message` key
+     * at all, which previously surfaced as a null message.
+     */
+    public function testReadsFieldErrorsSentUnderValidateKey(): void
+    {
+        $request = $this->subaccount();
+        $this->setMockHttpResponse('CreateSubaccountValidateFailure.txt');
+
+        /** @var CreateSubaccountResponse $response */
+        $response = $request->send();
+
+        $this->assertFalse($response->isSuccessful());
+        $this->assertSame('split_type: The split type field is required.', $response->getMessage());
     }
 
     public function testReportsRejectedSubaccount(): void
@@ -106,6 +123,9 @@ class CreateSubaccountRequestTest extends TestCase
 
         $this->assertFalse($response->isSuccessful());
         $this->assertNull($response->getSubaccountId());
-        $this->assertSame('account_number: The account number is invalid.', $response->getMessage());
+        $this->assertSame(
+            'The Bank Code is incorrect please check if it does exist with our getbanks endpoint.',
+            $response->getMessage()
+        );
     }
 }

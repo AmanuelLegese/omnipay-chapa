@@ -2,18 +2,19 @@
 
 namespace Omnipay\Chapa\Message;
 
-use Omnipay\Common\Exception\InvalidRequestException;
 use Omnipay\Common\Message\ResponseInterface;
 
 /**
- * Verify a Chapa transaction.
+ * Verify a Chapa transaction when the customer returns from checkout.
  *
  * The redirect back from the hosted checkout carries no trustworthy outcome,
- * so the payment status must be read from this server-side call.
+ * so the payment status must be read from this server-side call. It is the
+ * same verify as fetchTransaction(), plus reading the reference off the
+ * incoming request when none was passed.
  *
- * @link https://developer.chapa.co/docs/verify-payments/
+ * @link https://developer.chapa.co/integrations/verify-payments
  */
-class CompletePurchaseRequest extends AbstractRequest
+class CompletePurchaseRequest extends FetchTransactionRequest
 {
     /**
      * Chapa's callback carries `trx_ref`, not the `tx_ref` spelling used in the
@@ -47,30 +48,6 @@ class CompletePurchaseRequest extends AbstractRequest
         }
 
         return null;
-    }
-
-    public function getData(): array
-    {
-        $this->validate('secretKey');
-
-        // Not $this->validate('transactionId'): that reads the parameter bag
-        // directly and so would reject a reference that only exists on the
-        // incoming request.
-        if (($this->getTransactionId() ?? '') === '') {
-            throw new InvalidRequestException('The transactionId parameter is required');
-        }
-
-        return [];
-    }
-
-    protected function getHttpMethod(): string
-    {
-        return 'GET';
-    }
-
-    protected function getEndpoint(): string
-    {
-        return '/transaction/verify/' . rawurlencode((string) $this->getTransactionId());
     }
 
     protected function createResponse(array $data): ResponseInterface
